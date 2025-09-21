@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Contact Book</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="card">
+    <h2>📒 Contact Book</h2>
+
+    <form id="contactForm">
+      <input id="name" placeholder="Full Name" required />
+      <input id="email" placeholder="Email Address" required />
+      <input id="phone" placeholder="Phone (10 digits)" required />
+      <button type="submit">Add</button>
+    </form>
+
+    <div class="pagination">
+      <span>Page: <span id="pageNum">1</span></span>
+      <div>
+        <button id="prev">Prev</button>
+        <button id="next">Next</button>
+      </div>
+    </div>
+
+    <ul id="contacts"></ul>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast"></div>
+
+<script>
+let page = 1, limit = 10;
+const contactsEl = document.getElementById("contacts");
+const pageNum = document.getElementById("pageNum");
+const toast = document.getElementById("toast");
+
+function showToast(msg, type="info") {
+  toast.textContent = msg;
+  toast.className = "show " + type;
+  setTimeout(() => toast.className = "", 2500);
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function loadContacts() {
+  const res = await fetch(`/contacts?page=${page}&limit=${limit}`);
+  const data = await res.json();
+  pageNum.textContent = data.page;
+  render(data.contacts);
+}
+
+function render(list) {
+  contactsEl.innerHTML = "";
+  if (!list.length) return (contactsEl.innerHTML = "<li>No contacts</li>");
+  list.forEach(c => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <div>
+        <strong>${escapeHtml(c.name)}</strong>
+        <div class="meta">${escapeHtml(c.email)} • ${escapeHtml(c.phone)}</div>
+      </div>
+      <button class="del" data-id="${c.id}">Delete</button>
+    `;
+    contactsEl.appendChild(li);
+  });
+}
+
+document.getElementById("contactForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+
+  const res = await fetch("/contacts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email, phone })
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    return showToast(err.error || "Add failed", "error");
+  }
+  e.target.reset();
+  page = 1;
+  loadContacts();
+  showToast("Contact added!", "success");
+});
+
+contactsEl.addEventListener("click", async e => {
+  if (!e.target.matches(".del")) return;
+  const id = e.target.dataset.id;
+  if (confirm("Delete this contact?")) {
+    await fetch(`/contacts/${id}`, { method: "DELETE" });
+    loadContacts();
+    showToast("Contact deleted!", "success");
+  }
+});
+
+document.getElementById("prev").onclick = () => { if (page > 1) { page--; loadContacts(); } };
+document.getElementById("next").onclick = () => { page++; loadContacts(); };
+
+loadContacts();
+</script>
+</body>
+</html>
+
