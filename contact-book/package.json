@@ -4,7 +4,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "echo \"No build step required\""
+    "build": "echo \"No build step required\"",
+    "postinstall": "npm rebuild sqlite3"
   },
   "keywords": [],
   "author": "",
@@ -17,4 +18,5 @@
     "sqlite3": "^5.1.7"
   }
 }
+
 
